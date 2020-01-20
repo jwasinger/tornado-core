@@ -25,21 +25,46 @@ let withdrawal_tree = new MerkleTree(
     null,
     prefix)
 
-function zeroFill(str, length) {
-    if (str.length == length) {
-        return str;
-    } else if (str.length > length) {
-        throw "tried to zero-fill a string that was longer than the target length... probably indicates an overflow"
+function reverse_hex_str_endianess(str) {
+    let elements = []
+
+    if (str.length % 2 != 0) {
+        throw "bad length";
     }
 
-    let zero_fill_len = length - str.length
+    for (let i = 0; i < str.length; i += 2) {
+        elements.push(str.slice(i, i + 2));
+    }
 
-    return "0".repeat(zero_fill_len) + str
+    elements.reverse()
+    return elements.join("")
+}
+
+// TODO separate the endianess flipping out of this function
+function zeroFill(str, length, append) {
+    let zero_fill_len = length - str.length
+    let result;
+
+    if (str.length > length) {
+        throw "tried to zero-fill a string that was longer than the target length... probably indicates an overflow"
+    }
+    
+    if (append) {
+        result = str + "0".repeat(zero_fill_len)
+    } else {
+        result = "0".repeat(zero_fill_len) + str
+    }
+
+    if (!append) {
+        return reverse_hex_str_endianess(result);
+    } else {
+        return result;
+    }
 }
 
 function serialize_merkle_proof(proof) {
     let root = zeroFill(bigInt(proof.root).toString(16), 64)
-    let witness_count = zeroFill(bigInt(proof.path_elements.length).toString(16), 16)
+    let witness_count = zeroFill(bigInt(proof.path_elements.length).toString(16), 16, true)
     let path_elements = "";
     let selectors = "";
 
@@ -49,7 +74,6 @@ function serialize_merkle_proof(proof) {
     }
 
     let leaf = zeroFill(bigInt(proof.element).toString(16), 64);
-
     return root + witness_count + selectors + path_elements + leaf;
 }
 
@@ -58,20 +82,22 @@ async function get_deposit_proof(index) {
     let deposit_root = await deposit_tree.root()
 
     let mixer_root = hasher.hash(null, bigInt(deposit_root), bigInt(withdrawal_root));
-    mixer_root = bigInt(mixer_root).toString(16)
+    mixer_root = zeroFill(bigInt(mixer_root).toString(16), 64);
 
-    withdrawal_root = bigInt(withdrawal_root).toString(16)
+    withdrawal_root = zeroFill(bigInt(withdrawal_root).toString(16), 64);
     deposit_proof = await deposit_tree.path(index)
     deposit_proof = serialize_merkle_proof(deposit_proof)
 
+    debugger
     return mixer_root + withdrawal_root + deposit_proof;
 }
 
 function generateDeposit() {
   let deposit = {
-    secret: rbigint(31),
-    nullifier: rbigint(31),
+    secret: bigInt("146454714220269882021034249230549840417444180517621996217387968827117019017"),
+    nullifier: bigInt("193635023168929246146232520005846616617464778638251361296279116026781503437"),
   }
+
   const preimage = Buffer.concat([deposit.nullifier.leInt2Buff(31), deposit.secret.leInt2Buff(31)])
   deposit.commitment = pedersenHash(preimage)
   return deposit
@@ -89,7 +115,7 @@ async function main() {
     */
 
     let serialized_deposit_proof = await get_deposit_proof(0)
-    debugger
+    console.log(serialized_deposit_proof)
 
     // serialize a proof
 }
