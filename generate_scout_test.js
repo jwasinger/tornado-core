@@ -8,6 +8,7 @@ const crypto = require('crypto')
 const hasherImpl = require('./lib/MiMC')
 const hasher = new hasherImpl()
 const buildGroth16 = require('websnark/src/groth16')
+let serialize_groth16_proof = require("./serialize_groth16_proof");
 
 const rbigint = (nbytes) => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes))
 const pedersenHash = (data) => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0]
@@ -17,6 +18,7 @@ const prefix = "test";
 
 const circuit = require('./build/circuits/withdraw.json')
 const proving_key = fs.readFileSync('./build/circuits/withdraw_proving_key.bin').buffer
+const verifying_key = fs.readFileSync('./build/circuits/withdraw_verification_key.json').buffer
 
 let mixer = {}
 
@@ -101,6 +103,7 @@ async function generate_withdrawal_proof(deposit, commitment_index) {
   //let buf = Buffer.from(note.slice(2), 'hex')
   // let deposit = generateDeposit(bigInt.leBuff2int(buf.slice(0, 31)), bigInt.leBuff2int(buf.slice(31, 62)))
 
+  const vk = require("./build/circuits/withdraw_verification_key.json")
   groth16 = await buildGroth16()
 
   // Compute merkle proof of our commitment
@@ -138,7 +141,10 @@ async function generate_withdrawal_proof(deposit, commitment_index) {
 
   console.log('Generating SNARK proof')
   console.time('Proof time')
-  const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+  // const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+  const proofData = {"pi_a":["19600691627751155583531158112016412345681779117711671884109494562511544396246","1552155062360839305698850412804476793686910475051575318014722586729541092418","1"],"pi_b":[["2273894591906921204292420278788322070942238664174923606381572175218683422735","16579480890992812822716048365175122263206919051441375043914649785583398682275"],["18002542554112368138770838472469200828900450338014600038646417197486713643658","5168275778063434430733389215316330096232214526580219693327123510782657961999"],["1","0"]],"pi_c":["16159974114431907580417211943399560062742392543485403489084148335460869550463","21125896907606783169104695892284181463978220875530758772374975646017137066233","1"],"publicSignals":["20720505296415583481591766198622029223954196701106432568638566626249320130328","50692730957401323503687763314778606087243106582976930807267406828834618454"]}
+
+  const serialized_proof = serialize_groth16_proof(vk, proofData)
   debugger
   console.timeEnd('Proof time')
 }
@@ -174,6 +180,7 @@ async function main() {
     let withdrawal_proof = await generate_withdrawal_proof(deposit, 0);
     console.log("withdrawal proof")
 
+    let serialized_proof = serialize_groth16_proof(withdrawal_proof, verifying_key);
     debugger
 
     // serialize a proof
