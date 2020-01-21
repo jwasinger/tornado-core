@@ -1,3 +1,4 @@
+const fs = require('fs')
 const MerkleTree = require('./lib/MerkleTree')
 const circomlib = require('circomlib')
 const snarkjs = require('snarkjs')
@@ -6,12 +7,16 @@ const websnarkUtils = require('websnark/src/utils')
 const crypto = require('crypto')
 const hasherImpl = require('./lib/MiMC')
 const hasher = new hasherImpl()
+const buildGroth16 = require('websnark/src/groth16')
 
 const rbigint = (nbytes) => snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes))
 const pedersenHash = (data) => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0]
 
 const TREE_DEPTH = 20;
 const prefix = "test";
+
+const circuit = require('./build/circuits/withdraw.json')
+const proving_key = fs.readFileSync('./build/circuits/withdraw_proving_key.bin').buffer
 
 let mixer = {}
 
@@ -88,8 +93,54 @@ async function get_deposit_proof(index) {
     deposit_proof = await deposit_tree.path(index)
     deposit_proof = serialize_merkle_proof(deposit_proof)
 
-    debugger
     return mixer_root + withdrawal_root + deposit_proof;
+}
+
+async function generate_withdrawal_proof(deposit, commitment_index) {
+  // Decode hex string and restore the deposit object
+  //let buf = Buffer.from(note.slice(2), 'hex')
+  // let deposit = generateDeposit(bigInt.leBuff2int(buf.slice(0, 31)), bigInt.leBuff2int(buf.slice(31, 62)))
+
+  groth16 = await buildGroth16()
+
+  // Compute merkle proof of our commitment
+  // const { root, path_elements, path_index } = await generateMerkleProof(contract, deposit)
+  const deposit_index = deposit_tree.getIndexByElement(deposit.commitment)
+
+  // assert that the nullifier hash is not in the withdraw tree
+
+  // insert the nullifier hash into the withdrawal tree
+
+  let nullifier_hash_index = withdrawal_tree.totalElements
+  await withdrawal_tree.insert(deposit.nullifierHash)
+
+  const withdraw_merkle_proof = await withdrawal_tree.path(nullifier_hash_index);
+  const deposit_proof = await deposit_tree.path(deposit_index)
+
+  // Prepare circuit input
+  const input = {
+    // Public snark inputs
+    root: bigInt(deposit_proof.root),
+    nullifierHash: deposit.nullifierHash,
+    /*
+    recipient: bigInt(recipient),
+    relayer: bigInt(relayer),
+    fee: bigInt(fee),
+    refund: bigInt(refund),
+    */
+
+    // Private snark inputs
+    nullifier: deposit.nullifier,
+    secret: deposit.secret,
+    pathElements: deposit_proof.path_elements,
+    pathIndices: deposit_proof.path_index,
+  }
+
+  console.log('Generating SNARK proof')
+  console.time('Proof time')
+  const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
+  debugger
+  console.timeEnd('Proof time')
 }
 
 function generateDeposit() {
@@ -100,6 +151,8 @@ function generateDeposit() {
 
   const preimage = Buffer.concat([deposit.nullifier.leInt2Buff(31), deposit.secret.leInt2Buff(31)])
   deposit.commitment = pedersenHash(preimage)
+  deposit.nullifierHash = pedersenHash(deposit.nullifier.leInt2Buff(31))
+
   return deposit
 }
 
@@ -115,7 +168,13 @@ async function main() {
     */
 
     let serialized_deposit_proof = await get_deposit_proof(0)
+    console.log("deposit proof")
     console.log(serialized_deposit_proof)
+
+    let withdrawal_proof = await generate_withdrawal_proof(deposit, 0);
+    console.log("withdrawal proof")
+
+    debugger
 
     // serialize a proof
 }
