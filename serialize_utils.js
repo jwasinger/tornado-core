@@ -4,7 +4,8 @@ function reverse_hex_str_endianess(str) {
     let elements = []
 
     if (str.length % 2 != 0) {
-        throw "bad length";
+        console.trace("bad length");
+        throw ""
     }
 
     for (let i = 0; i < str.length; i += 2) {
@@ -21,7 +22,8 @@ function zeroFill(str, length, append) {
     let result;
 
     if (str.length > length) {
-        throw "tried to zero-fill a string that was longer than the target length... probably indicates an overflow"
+        console.trace("tried to zero-fill a string that was longer than the target length... probably indicates an overflow")
+        throw ""
     }
     
     if (append) {

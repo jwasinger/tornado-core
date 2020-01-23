@@ -49,18 +49,25 @@ function serialize_merkle_proof(proof) {
     return root + witness_count + selectors + path_elements + leaf;
 }
 
+async function get_mixer_root() {
+    let withdrawal_root = await withdrawal_tree.root()
+    let deposit_root = await deposit_tree.root()
+
+    return bigInt(hasher.hash(null, bigInt(deposit_root), bigInt(withdrawal_root)));
+}
+
 async function get_deposit_proof(index) {
     let withdrawal_root = await withdrawal_tree.root()
     let deposit_root = await deposit_tree.root()
 
-    let mixer_root = hasher.hash(null, bigInt(deposit_root), bigInt(withdrawal_root));
-    mixer_root = zeroFill(bigInt(mixer_root).toString(16), 64);
+    let mixer_root = await get_mixer_root();
+    mixer_root = zeroFill(mixer_root.toString(16), 64);
 
     withdrawal_root = zeroFill(bigInt(withdrawal_root).toString(16), 64);
     deposit_proof = await deposit_tree.path(index)
     deposit_proof = serialize_merkle_proof(deposit_proof)
 
-    return mixer_root + withdrawal_root + deposit_proof;
+    return "00" + mixer_root + withdrawal_root + deposit_proof;
 }
 
 async function generate_withdrawal_proof(deposit, commitment_index) {
@@ -85,6 +92,9 @@ async function generate_withdrawal_proof(deposit, commitment_index) {
   const withdraw_merkle_proof = await withdrawal_tree.path(nullifier_hash_index);
   const deposit_proof = await deposit_tree.path(deposit_index)
 
+  const deposit_root = zeroFill(bigInt(await deposit_tree.root()).toString(16), 64)
+  const mixer_root = zeroFill(bigInt(await get_mixer_root()).toString(16), 64);
+
   // Prepare circuit input
   const input = {
     // Public snark inputs
@@ -104,14 +114,13 @@ async function generate_withdrawal_proof(deposit, commitment_index) {
     pathIndices: deposit_proof.path_index,
   }
 
-  console.log('Generating SNARK proof')
-  console.time('Proof time')
+  // console.log('Generating SNARK proof')
+  // console.time('Proof time')
   // const proofData = await websnarkUtils.genWitnessAndProve(groth16, input, circuit, proving_key)
   const proofData = {"pi_a":["19600691627751155583531158112016412345681779117711671884109494562511544396246","1552155062360839305698850412804476793686910475051575318014722586729541092418","1"],"pi_b":[["2273894591906921204292420278788322070942238664174923606381572175218683422735","16579480890992812822716048365175122263206919051441375043914649785583398682275"],["18002542554112368138770838472469200828900450338014600038646417197486713643658","5168275778063434430733389215316330096232214526580219693327123510782657961999"],["1","0"]],"pi_c":["16159974114431907580417211943399560062742392543485403489084148335460869550463","21125896907606783169104695892284181463978220875530758772374975646017137066233","1"],"publicSignals":["20720505296415583481591766198622029223954196701106432568638566626249320130328","50692730957401323503687763314778606087243106582976930807267406828834618454"]}
 
-  const serialized_proof = serialize_groth16_proof(vk, proofData)
-  console.timeEnd('Proof time')
-  console.log(serialized_proof)
+  return "01" + mixer_root + deposit_root + serialize_merkle_proof(withdraw_merkle_proof) + serialize_groth16_proof(vk, proofData)
+  // console.timeEnd('Proof time')
 }
 
 function generateDeposit() {
@@ -130,22 +139,25 @@ function generateDeposit() {
 async function main() {
     let deposit = generateDeposit();
 
-    const empty_root = await deposit_tree.root()
+    const deposit_pre_state = zeroFill((await get_mixer_root()).toString(16), 64)
     await deposit_tree.insert(deposit.commitment)
-
-    /*
-    const proof = await deposit_tree.path(0)
-    serialized_m_proof = serialize_merkle_proof(proof);
-    */
+    const withdrawal_pre_state = zeroFill((await get_mixer_root()).toString(16), 64)
 
     let serialized_deposit_proof = await get_deposit_proof(0)
     console.log("deposit proof")
-    console.log(serialized_deposit_proof)
+    console.log("prestate: ", deposit_pre_state);
+    console.log("expected: ", withdrawal_pre_state);
+    console.log("input: ", serialized_deposit_proof);
+    console.log("\n")
 
     let withdrawal_proof = await generate_withdrawal_proof(deposit, 0);
-    console.log("withdrawal proof")
+    const withdrawal_post_state = zeroFill((await get_mixer_root()).toString(16), 64)
 
-    // serialize a proof
+    console.log("withdrawal proof")
+    console.log("prestate: ", withdrawal_pre_state);
+    console.log("expected: ", withdrawal_post_state);
+    console.log("input: ", withdrawal_proof);
+    console.log("\n")
 }
 
 main()
