@@ -41,8 +41,31 @@ function zeroFill(str, length, append) {
     }
 }
 
+function zero_fill(str, length, append) {
+    let zero_fill_len = length - str.length
+    let result;
+
+    if (str.length > length) {
+        console.trace("tried to zero-fill a string that was longer than the target length... probably indicates an overflow")
+        throw ""
+    }
+    
+    if (append) {
+        result = str + "0".repeat(zero_fill_len)
+    } else {
+        result = "0".repeat(zero_fill_len) + str
+    }
+
+    return result
+}
+
+function num_to_hex(num) {
+    return zeroFill(BigInt(num).toString(16), 64)
+}
+
 function num_to_hex_fq(num) {
-    let num_be_hex = zeroFill(BigInt(num).toString(16), 64)
+    // zero fill but don't reverse the endianess.  need to refactor this code
+    let num_be_hex = zero_fill(BigInt(num).toString(16), 64)
 
     let hex_num = fq_toMontgomery(BigInt('0x'+num_be_hex)).toString(16)
     return zeroFill(hex_num, 64)
@@ -51,5 +74,6 @@ function num_to_hex_fq(num) {
 module.exports = {
     reverse_hex_str_endianess,
     zeroFill,
-    num_to_hex_fq
+    num_to_hex_fq,
+    num_to_hex
 }

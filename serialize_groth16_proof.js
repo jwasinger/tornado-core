@@ -1,7 +1,7 @@
 let bigInt = require('snarkjs').bigInt
 
 const { fq_toMontgomery } = require('./bn128.js')
-const { num_to_hex_fq, reverse_hex_str_endianess, zeroFill } = require('./serialize_utils.js')
+const { num_to_hex, num_to_hex_fq, reverse_hex_str_endianess, zeroFill } = require('./serialize_utils.js')
 
 function serialize_f1(num) {
     if (num.length == 3)  {
@@ -39,7 +39,7 @@ function serialize_groth16_proof(vk, proof) {
        serialized_ics += serialize_f1(vk['IC'][i]);
 
        if (i < vk['IC'].length - 1) {
-           serialized_inputs += num_to_hex_fq(proof['publicSignals'][i]);
+           serialized_inputs += num_to_hex(proof['publicSignals'][i]);
        }
    }
 
