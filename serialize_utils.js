@@ -1,4 +1,5 @@
 const bigInt = require('snarkjs').bigInt
+const { fq_toMontgomery } = require("./bn128.js")
 
 function reverse_hex_str_endianess(str) {
     let elements = []
@@ -22,6 +23,7 @@ function zeroFill(str, length, append) {
     let result;
 
     if (str.length > length) {
+        debugger
         console.trace("tried to zero-fill a string that was longer than the target length... probably indicates an overflow")
         throw ""
     }
@@ -39,13 +41,15 @@ function zeroFill(str, length, append) {
     }
 }
 
-function num_to_hex(num) {
-    let hex_num = bigInt(num).toString(16)
+function num_to_hex_fq(num) {
+    let num_be_hex = zeroFill(BigInt(num).toString(16), 64)
+
+    let hex_num = fq_toMontgomery(BigInt('0x'+num_be_hex)).toString(16)
     return zeroFill(hex_num, 64)
 }
 
 module.exports = {
     reverse_hex_str_endianess,
     zeroFill,
-    num_to_hex
+    num_to_hex_fq
 }
