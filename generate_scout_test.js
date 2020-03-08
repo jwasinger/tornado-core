@@ -1,5 +1,6 @@
 const fs = require('fs')
 const MerkleTree = require('./lib/MerkleTree')
+const MerkleTrie = require('./lib/MerkleTrie')
 const circomlib = require('circomlib')
 const snarkjs = require('snarkjs')
 const bigInt = snarkjs.bigInt
@@ -31,7 +32,7 @@ let deposit_tree = new MerkleTree(
     null,
     prefix)
 
-let withdrawal_tree = new MerkleTree(
+let withdrawal_tree = new MerkleTrie(
     TREE_DEPTH,
     null,
     prefix)
@@ -88,8 +89,10 @@ async function generate_withdrawal_proof(deposit, commitment_index) {
 
   // insert the nullifier hash into the withdrawal tree
 
-  let nullifier_hash_index = withdrawal_tree.totalElements
+  //let nullifier_hash_index = withdrawal_tree.totalElements
   await withdrawal_tree.insert(deposit.nullifierHash)
+  debugger
+  let nullifier_hash_index = withdrawal_tree.getIndexByElement(deposit.nullifierHash)
 
   const withdraw_merkle_proof = await withdrawal_tree.path(nullifier_hash_index);
   const deposit_proof = await deposit_tree.path(deposit_index)
@@ -165,4 +168,6 @@ async function main() {
     console.log("\n")
 }
 
-main()
+main().then(() => {
+    console.log("fin")
+})
