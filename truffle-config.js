@@ -6,6 +6,10 @@ const utils = require('web3-utils')
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
+const privateKey = "cbfee4ca4db6cf6120e50eff7033ed6c65168ae4bd93bb66788ed1f50ff270fb"
+const PrivateKeyProvider = require("truffle-privatekey-provider");
+const provider = new PrivateKeyProvider(privateKey, "http://localhost:8545")
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -28,6 +32,8 @@ module.exports = {
       host: '127.0.0.1',     // Localhost (default: none)
       port: 8545,            // Standard Ethereum port (default: none)
       network_id: '*',       // Any network (default: none)
+      provider: provider,
+      skipDryRun: true,
     },
 
     // Another network with more advanced options...
@@ -39,43 +45,6 @@ module.exports = {
     //   from: <address>,        // Account to send txs from (default: accounts[0])
     //   websockets: true        // Enable EventEmitter interface for web3 (default: false)
     // },
-
-    // Useful for deploying to a public network.
-    // NB: It's important to wrap the provider as a function.
-    kovan: {
-      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, 'https://kovan.infura.io/v3/97c8bf358b9942a9853fab1ba93dc5b3'),
-      network_id: 42,
-      gas: 6000000,
-      gasPrice: utils.toWei('1', 'gwei'),
-      // confirmations: 0,
-      // timeoutBlocks: 200,
-      skipDryRun: true
-    },
-    rinkeby: {
-      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, 'https://rinkeby.infura.io/v3/97c8bf358b9942a9853fab1ba93dc5b3'),
-      network_id: 4,
-      gas: 6000000,
-      gasPrice: utils.toWei('1', 'gwei'),
-      // confirmations: 0,
-      // timeoutBlocks: 200,
-      skipDryRun: true
-    },
-    mainnet: {
-      provider: () => new HDWalletProvider(process.env.PRIVATE_KEY, 'http://ethereum-rpc.trustwalletapp.com'),
-      network_id: 1,
-      gas: 6000000,
-      gasPrice: utils.toWei('2', 'gwei'),
-      // confirmations: 0,
-      // timeoutBlocks: 200,
-      skipDryRun: true
-    },
-
-    // Useful for private networks
-    // private: {
-    //   provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
-    //   network_id: 2111,   // This network is yours, in the cloud.
-    //   production: true    // Treats this network as if it was a public net. (default: false)
-    // }
   },
 
   // Set default mocha options here, use special reporters etc.

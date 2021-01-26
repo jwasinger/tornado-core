@@ -13,6 +13,7 @@ function evm384 (path) {
   const deployed = Buffer.from(fs.readFileSync(path).toString().replace('\n', '').replace('0x', ''), 'hex')
   let length = deployed.length.toString(16)
   assert(length.length == 4)
+
   return '0x38600c60003961' + length + '6000f3' + deployed.toString('hex')
 }
 
