@@ -13,7 +13,7 @@
     "build:browserify": "npx browserify cli.js -o index.js --exclude worker_threads",
     "build": "npm run build:circuit && npm run build:contract && npm run build:browserify",
     "browserify": "npm run build:browserify",
-    "test": "npx truffle test",
+    "test": "npx truffle test --network development",
     "migrate": "npm run migrate:development",
     "migrate:development": "npx truffle migrate --network development --reset",
     "eslint": "npx eslint --ignore-path .gitignore .",
